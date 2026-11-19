@@ -274,7 +274,9 @@ func (c *Command) Start(ctx context.Context, nodeName apitypes.NodeName, kubelet
 	}
 
 	if c.CriSocket == "" {
-		componentManager.Add(ctx, containerd.NewComponent(c.LogLevels.Containerd, c.K0sVars, workerConfig))
+		ctrd := containerd.NewComponent(c.LogLevels.Containerd, c.K0sVars, workerConfig)
+		ctrd.UseCrun = c.UseCrun
+		componentManager.Add(ctx, ctrd)
 		componentManager.Add(ctx, worker.NewOCIBundleReconciler(c.K0sVars))
 		componentManager.Add(ctx, containerd.NewDeprecationMonitor(
 			containerd.Address(c.K0sVars.RunDir),

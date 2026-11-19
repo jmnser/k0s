@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sync"
 	"syscall"
@@ -42,6 +43,8 @@ type Component struct {
 	K0sVars       *config.CfgVars
 	Profile       *workerconfig.Profile
 	OCIBundlePath string
+	// UseCrun makes the default runc runtime execute crun from the host PATH.
+	UseCrun bool
 
 	supervisor     *supervisor.Supervisor
 	executablePath string
@@ -179,7 +182,15 @@ func (c *Component) setupConfig() error {
 		return fmt.Errorf("can't create containerd config imports dir: %w", err)
 	}
 
-	configData, err := marshalContainerdConfig(c.importsPath, c.Profile.PauseImage.URI())
+	var runtimeBinary string
+	if c.UseCrun {
+		if runtimeBinary, err = exec.LookPath("crun"); err != nil {
+			return fmt.Errorf("--use-crun is set but crun is not available: %w", err)
+		}
+		logrus.Infof("Using %s as the default OCI runtime", runtimeBinary)
+	}
+
+	configData, err := marshalContainerdConfig(c.importsPath, c.Profile.PauseImage.URI(), runtimeBinary)
 	if err != nil {
 		return fmt.Errorf("can't marshal containerd config: %w", err)
 	}

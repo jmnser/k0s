@@ -14,7 +14,8 @@ import (
 
 // marshalContainerdConfig returns the TOML bytes for the k0s-managed containerd
 // configuration, with CRI plugin defaults inline and a glob import for user drop-ins.
-func marshalContainerdConfig(importsPath, sandboxImage string) ([]byte, error) {
+// A non-empty runtimeBinary replaces the runc binary of the default runc runtime.
+func marshalContainerdConfig(importsPath, sandboxImage, runtimeBinary string) ([]byte, error) {
 	imagesConf := map[string]any{
 		"pinned_images": map[string]any{
 			"sandbox": sandboxImage,
@@ -27,6 +28,17 @@ func marshalContainerdConfig(importsPath, sandboxImage string) ([]byte, error) {
 		runtimeConf["cni"] = map[string]any{
 			"conf_dir": `c:\etc\cni\net.d`,
 			"bin_dirs": []any{`c:\opt\cni\bin`},
+		}
+	}
+
+	if runtimeBinary != "" {
+		runtimeConf["containerd"] = map[string]any{
+			"runtimes": map[string]any{
+				"runc": map[string]any{
+					"runtime_type": "io.containerd.runc.v2",
+					"options":      map[string]any{"BinaryName": runtimeBinary},
+				},
+			},
 		}
 	}
 
