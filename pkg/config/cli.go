@@ -260,7 +260,9 @@ func GetWorkerFlags() *pflag.FlagSet {
 	flagset.StringSliceVarP(&workerOpts.Taints, "taints", "", []string{}, "Node taints, list of key=value:effect strings")
 	flagset.StringVar(&workerOpts.KubeletExtraArgs, "kubelet-extra-args", "", "extra args for kubelet")
 	flagset.StringVar(&workerOpts.IPTablesMode, "iptables-mode", "", "iptables mode (valid values: nft, legacy, auto). default: auto")
-	flagset.BoolVar(&workerOpts.UseCrun, "use-crun", false, "use crun from the host PATH instead of the bundled runc for the default containerd runtime")
+	if runtime.GOOS == "linux" {
+		flagset.BoolVar(&workerOpts.UseCrun, "use-crun", false, "use crun from the host PATH instead of the bundled runc to run containers (Linux only)")
+	}
 	flagset.BoolVar(&workerOpts.IgnorePreFlightChecks, "ignore-pre-flight-checks", false, "continue even if pre-flight checks fail")
 	flagset.AddFlagSet(GetCriSocketFlag())
 

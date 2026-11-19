@@ -80,6 +80,7 @@ Flags:
       --status-socket string                           Full file path to the socket file. (default: <rundir>/status.sock)
       --taints strings                                 Node taints, list of key=value:effect strings
       --token-file string                              Path to the file containing join-token.
+      --use-crun                                       use crun from the host PATH instead of the bundled runc to run containers (Linux only)
   -v, --verbose                                        Verbose logging (default true)
 `, out.String())
 }

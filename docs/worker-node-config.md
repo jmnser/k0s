@@ -121,6 +121,19 @@ kubelet APIs remain unavailable.
 [Certificate Signing Requests]: https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/
 [Kubernetes Metrics Server]: https://github.com/kubernetes-sigs/metrics-server
 
+## crun as OCI Runtime
+
+By default, containerd runs containers with the runc binary that is bundled with k0s.
+On Linux, the `--use-crun` flag makes containerd use crun from the host `PATH` instead.
+The worker refuses to start if crun is missing, or if the flag is combined with `--cri-socket`.
+
+```shell
+k0s worker --use-crun
+```
+
+The flag only changes the k0s-managed `/etc/k0s/containerd.toml`.
+A drop-in in `/etc/k0s/containerd.d/` that sets `BinaryName` for the `runc` runtime takes precedence.
+
 ## IPTables Mode
 
 k0s detects the iptables backend automatically based on the existing records. On a brand-new setup, `iptables-nft` will be used.

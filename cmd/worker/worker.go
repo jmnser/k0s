@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 
@@ -213,6 +214,17 @@ func loadKubeconfigFromJoinToken(tokenData string) (*clientcmdapi.Config, error)
 
 // Start starts the worker components based on the given [config.CLIOptions].
 func (c *Command) Start(ctx context.Context, nodeName apitypes.NodeName, kubeletExtraArgs stringmap.StringMap, getBootstrapKubeconfig clientcmd.KubeconfigGetter, controller EmbeddingController) error {
+	var runtimeBinary string
+	if c.UseCrun {
+		if c.CriSocket != "" {
+			return errors.New("--use-crun cannot be combined with --cri-socket")
+		}
+		var err error
+		if runtimeBinary, err = exec.LookPath("crun"); err != nil {
+			return fmt.Errorf("--use-crun is set, but crun was not found: %w", err)
+		}
+	}
+
 	if err := worker.BootstrapKubeletClientConfig(ctx, c.K0sVars, nodeName, &c.WorkerOptions, getBootstrapKubeconfig); err != nil {
 		return fmt.Errorf("failed to bootstrap kubelet client configuration: %w", err)
 	}
@@ -275,7 +287,7 @@ func (c *Command) Start(ctx context.Context, nodeName apitypes.NodeName, kubelet
 
 	if c.CriSocket == "" {
 		ctrd := containerd.NewComponent(c.LogLevels.Containerd, c.K0sVars, workerConfig)
-		ctrd.UseCrun = c.UseCrun
+		ctrd.RuntimeBinary = runtimeBinary
 		componentManager.Add(ctx, ctrd)
 		componentManager.Add(ctx, worker.NewOCIBundleReconciler(c.K0sVars))
 		componentManager.Add(ctx, containerd.NewDeprecationMonitor(

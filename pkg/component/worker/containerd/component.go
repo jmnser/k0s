@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sync"
 	"syscall"
@@ -43,8 +42,8 @@ type Component struct {
 	K0sVars       *config.CfgVars
 	Profile       *workerconfig.Profile
 	OCIBundlePath string
-	// UseCrun makes the default runc runtime execute crun from the host PATH.
-	UseCrun bool
+	// RuntimeBinary, if set, replaces the bundled runc binary of the default runtime.
+	RuntimeBinary string
 
 	supervisor     *supervisor.Supervisor
 	executablePath string
@@ -173,6 +172,9 @@ func (c *Component) setupConfig() error {
 
 	if !k0sManaged {
 		logrus.Infof("containerd config file %s is not k0s managed, skipping config generation", c.confPath)
+		if c.RuntimeBinary != "" {
+			logrus.Warnf("Ignoring %s as the default OCI runtime, because %s is not k0s managed", c.RuntimeBinary, c.confPath)
+		}
 		return nil
 	}
 	if err := dir.Init(filepath.Dir(c.confPath), 0755); err != nil {
@@ -182,15 +184,11 @@ func (c *Component) setupConfig() error {
 		return fmt.Errorf("can't create containerd config imports dir: %w", err)
 	}
 
-	var runtimeBinary string
-	if c.UseCrun {
-		if runtimeBinary, err = exec.LookPath("crun"); err != nil {
-			return fmt.Errorf("--use-crun is set but crun is not available: %w", err)
-		}
-		logrus.Infof("Using %s as the default OCI runtime", runtimeBinary)
+	if c.RuntimeBinary != "" {
+		logrus.Infof("Using %s as the default OCI runtime", c.RuntimeBinary)
 	}
 
-	configData, err := marshalContainerdConfig(c.importsPath, c.Profile.PauseImage.URI(), runtimeBinary)
+	configData, err := marshalContainerdConfig(c.importsPath, c.Profile.PauseImage.URI(), c.RuntimeBinary)
 	if err != nil {
 		return fmt.Errorf("can't marshal containerd config: %w", err)
 	}
